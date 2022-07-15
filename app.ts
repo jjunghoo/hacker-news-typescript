@@ -1,10 +1,22 @@
-const $container = document.getElementById("root");
-const $ul = document.createElement("ul");
-const $content = document.createElement("div");
-const NEWS_URL = "https://api.hnpwa.com/v0/news/1.json";
-const CONTENT_URL = "https://api.hnpwa.com/v0/item/@id.json";
+type Store = {
+  currentPage: number;
+  feeds: NewsFeed[];
+};
 
-const store = {
+type NewsFeed = {
+  id: number;
+  comments_count: number;
+  url: string;
+  time_ago: string;
+  points: number;
+  title: string;
+  read?: boolean;
+};
+
+const $container: HTMLElement | null = document.getElementById("root");
+const NEWS_URL: string = "https://api.hnpwa.com/v0/news/1.json";
+const CONTENT_URL: string = "https://api.hnpwa.com/v0/item/@id.json";
+const store: Store = {
   currentPage: 1,
   feeds: [],
 };
@@ -22,8 +34,16 @@ const makeFeeds = (feeds) => {
   return feeds;
 };
 
+const updateView = (html) => {
+  if ($container !== null) {
+    $container.innerHTML = html;
+  } else {
+    console.error("최상위 컨테이너가 없어 UI를 진행하지 못합니다.");
+  }
+};
+
 const newsFeed = () => {
-  let newsFeed = store.feeds;
+  let newsFeed: NewsFeed[] = store.feeds;
   const newsList = [];
   let template = `
     <div class="bg-gray-600 min-h-screen">
@@ -97,7 +117,8 @@ const newsFeed = () => {
           ? store.currentPage
           : store.currentPage + 1
       );
-      $container.innerHTML = template;
+
+      updateView(template);
     });
   }
 
@@ -138,7 +159,8 @@ const newsFeed = () => {
       ? store.currentPage
       : store.currentPage + 1
   );
-  $container.innerHTML = template;
+
+  updateView(template);
 };
 
 const newsDetail = () => {
@@ -202,9 +224,8 @@ const newsDetail = () => {
       return commentString.join("");
     };
 
-    $container.innerHTML = template.replace(
-      "{{__comments__}}",
-      makeComments(data.comments)
+    updateView(
+      template.replace("{{__comments__}}", makeComments(data.comments))
     );
   });
 };
