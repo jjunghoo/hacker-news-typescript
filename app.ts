@@ -3,14 +3,28 @@ type Store = {
   feeds: NewsFeed[];
 };
 
-type NewsFeed = {
+type News = {
   id: number;
-  comments_count: number;
   url: string;
+  user: string;
   time_ago: string;
-  points: number;
   title: string;
+  content: string;
+};
+
+type NewsFeed = News & {
+  comments_count: number;
+  points: number;
   read?: boolean;
+};
+
+type NewsDetail = News & {
+  comments: NewsComment[];
+};
+
+type NewsComment = News & {
+  comments: NewsComment[];
+  level: number;
 };
 
 const $container: HTMLElement | null = document.getElementById("root");
@@ -21,20 +35,22 @@ const store: Store = {
   feeds: [],
 };
 
-async function getData(url) {
+async function getData<AjaxResponse>(
+  url: string
+): Promise<Awaited<AjaxResponse>> {
   let response = await fetch(url);
   let data = await response.json();
   return data;
 }
 
-const makeFeeds = (feeds) => {
+const makeFeeds = (feeds: NewsFeed[]): NewsFeed[] => {
   for (let i = 0; i < feeds.length; i++) {
     feeds[i].read = false;
   }
   return feeds;
 };
 
-const updateView = (html) => {
+const updateView = (html: string): void => {
   if ($container !== null) {
     $container.innerHTML = html;
   } else {
@@ -42,9 +58,9 @@ const updateView = (html) => {
   }
 };
 
-const newsFeed = () => {
+const newsFeed = (): void => {
   let newsFeed: NewsFeed[] = store.feeds;
-  const newsList = [];
+  const newsList: string[] = [];
   let template = `
     <div class="bg-gray-600 min-h-screen">
       <div class="bg-white text-xl">
@@ -71,7 +87,7 @@ const newsFeed = () => {
   `;
 
   if (newsFeed.length === 0) {
-    getData(NEWS_URL).then((data) => {
+    getData<NewsFeed[]>(NEWS_URL).then((data) => {
       newsFeed = store.feeds = makeFeeds(data);
 
       for (
@@ -109,13 +125,15 @@ const newsFeed = () => {
       template = template.replace("{{__news_feed__}}", newsList.join(""));
       template = template.replace(
         "{{__prev_page__}}",
-        store.currentPage > 1 ? store.currentPage - 1 : 1
+        String(store.currentPage > 1 ? store.currentPage - 1 : 1)
       );
       template = template.replace(
         "{{__next_page__}}",
-        store.currentPage + 1 > newsFeed.length / 10
-          ? store.currentPage
-          : store.currentPage + 1
+        String(
+          store.currentPage + 1 > newsFeed.length / 10
+            ? store.currentPage
+            : store.currentPage + 1
+        )
       );
 
       updateView(template);
@@ -151,22 +169,24 @@ const newsFeed = () => {
   template = template.replace("{{__news_feed__}}", newsList.join(""));
   template = template.replace(
     "{{__prev_page__}}",
-    store.currentPage > 1 ? store.currentPage - 1 : 1
+    String(store.currentPage > 1 ? store.currentPage - 1 : 1)
   );
   template = template.replace(
     "{{__next_page__}}",
-    store.currentPage + 1 > newsFeed.length / 10
-      ? store.currentPage
-      : store.currentPage + 1
+    String(
+      store.currentPage + 1 > newsFeed.length / 10
+        ? store.currentPage
+        : store.currentPage + 1
+    )
   );
 
   updateView(template);
 };
 
-const newsDetail = () => {
+const newsDetail = (): void => {
   const id = location.hash.substring(7);
 
-  getData(CONTENT_URL.replace("@id", id)).then((data) => {
+  getData<NewsDetail>(CONTENT_URL.replace("@id", id)).then((data) => {
     let template = `
       <div class="bg-gray-600 min-h-screen pb-8">
         <div class="bg-white text-xl">
@@ -203,34 +223,37 @@ const newsDetail = () => {
       }
     }
 
-    const makeComments = (comments, called = 0) => {
-      const commentString = [];
-
-      for (let i = 0; i < comments.length; i++) {
-        commentString.push(`
-          <div style="padding-left: ${called * 40}px;" class="mt-4">
-            <div class="text-gray-400">
-              <i class="fa fa-sort-up mr-2"></i>
-              <strong>${comments[i].user}</strong> ${comments[i].time_ago}
-            </div>
-            <p class="text-gray-700">${comments[i].content}</p>
-          </div>
-        `);
-
-        if (comments[i].comments.length > 0) {
-          commentString.push(makeComments(comments[i].comments, called + 1));
-        }
-      }
-      return commentString.join("");
-    };
-
     updateView(
       template.replace("{{__comments__}}", makeComments(data.comments))
     );
   });
+
+  const makeComments = (comments: NewsComment[]): string => {
+    const commentString = [];
+
+    for (let i = 0; i < comments.length; i++) {
+      const { level, user, time_ago, content, ...etc }: NewsComment =
+        comments[i];
+
+      commentString.push(`
+        <div style="padding-left: ${level * 40}px;" class="mt-4">
+          <div class="text-gray-400">
+            <i class="fa fa-sort-up mr-2"></i>
+            <strong>${user}</strong> ${time_ago}
+          </div>
+          <p class="text-gray-700">${content}</p>
+        </div>
+      `);
+
+      if (etc.comments.length > 0) {
+        commentString.push(makeComments(etc.comments));
+      }
+    }
+    return commentString.join("");
+  };
 };
 
-const router = () => {
+const router = (): void => {
   const routePath = location.hash;
 
   if (routePath === "") {
