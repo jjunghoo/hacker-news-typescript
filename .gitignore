@@ -6,6 +6,7 @@
 .cache
 dist/
 node_modules
+/hn.http
 
 # Icon must end with two \r
 Icon
