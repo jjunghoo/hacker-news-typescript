@@ -35,13 +35,39 @@ const store: Store = {
   feeds: [],
 };
 
-async function getData<AjaxResponse>(
-  url: string
-): Promise<Awaited<AjaxResponse>> {
-  let response = await fetch(url);
-  let data = await response.json();
-  return data;
+class Api {
+  url: string;
+
+  constructor(url: string) {
+    this.url = url;
+  }
+
+  protected async getRequest<AjaxResponse>(): Promise<Awaited<AjaxResponse>> {
+    let response = await fetch(this.url);
+    let data = await response.json();
+    return data;
+  }
 }
+
+class NewsFeedApi extends Api {
+  getData(): Promise<NewsFeed[]> {
+    return this.getRequest<NewsFeed[]>();
+  }
+}
+
+class NewsDetailApi extends Api {
+  getData(): Promise<NewsDetail> {
+    return this.getRequest<NewsDetail>();
+  }
+}
+
+// async function getData<AjaxResponse>(
+//   url: string
+// ): Promise<Awaited<AjaxResponse>> {
+//   let response = await fetch(url);
+//   let data = await response.json();
+//   return data;
+// }
 
 const makeFeeds = (feeds: NewsFeed[]): NewsFeed[] => {
   for (let i = 0; i < feeds.length; i++) {
@@ -59,6 +85,7 @@ const updateView = (html: string): void => {
 };
 
 const newsFeed = (): void => {
+  const api = new NewsFeedApi(NEWS_URL);
   let newsFeed: NewsFeed[] = store.feeds;
   const newsList: string[] = [];
   let template = `
@@ -87,9 +114,8 @@ const newsFeed = (): void => {
   `;
 
   if (newsFeed.length === 0) {
-    getData<NewsFeed[]>(NEWS_URL).then((data) => {
+    api.getData().then((data) => {
       newsFeed = store.feeds = makeFeeds(data);
-
       for (
         let i = (store.currentPage - 1) * 10;
         i < store.currentPage * 10;
@@ -101,7 +127,7 @@ const newsFeed = (): void => {
         } mt-6 rounded-lg shadow-md transition-colors duration-500 hover:bg-green-100">
           <div class="flex">
             <div class="flex-auto">
-              <a href="#/show/${newsFeed[i].id}">${newsFeed[i].title}</a>  
+              <a href="#/show/${newsFeed[i].id}">${newsFeed[i].title}</a>
             </div>
             <div class="text-center text-sm">
               <div class="w-10 text-white bg-green-300 rounded-lg px-0 py-2">${
@@ -116,9 +142,9 @@ const newsFeed = (): void => {
               <div><i class="far fa-clock mr-1"></i>${
                 newsFeed[i].time_ago
               }</div>
-            </div>  
+            </div>
           </div>
-        </div>  
+        </div>
       `);
       }
 
@@ -185,8 +211,9 @@ const newsFeed = (): void => {
 
 const newsDetail = (): void => {
   const id = location.hash.substring(7);
+  const api = new NewsDetailApi(CONTENT_URL.replace("@id", id));
 
-  getData<NewsDetail>(CONTENT_URL.replace("@id", id)).then((data) => {
+  api.getData().then((data) => {
     let template = `
       <div class="bg-gray-600 min-h-screen pb-8">
         <div class="bg-white text-xl">
